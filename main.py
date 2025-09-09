@@ -202,6 +202,35 @@ async def on_message(message):
             else:
                 await message.channel.send("No games have been suggested yet!")
 
-# ------------------- Start Bot -------------------
-keep_alive()
-bot.run(os.environ["TOKEN"])
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import threading
+import time
+
+# --- Auto-reload handler ---
+class ReloadHandler(FileSystemEventHandler):
+    def __init__(self, restart_func):
+        self.restart_func = restart_func
+
+    def on_modified(self, event):
+        if event.src_path.endswith("main.py"):
+            print("Detected code change. Restarting bot...")
+            self.restart_func()
+
+def start_bot():
+    keep_alive()
+    bot.run(os.environ["TOKEN"])
+
+def restart_bot():
+    threading.Thread(target=start_bot).start()
+
+# Watch for changes
+observer = Observer()
+observer.schedule(ReloadHandler(restart_bot), path=".", recursive=False)
+observer.start()
+
+try:
+    start_bot()
+except KeyboardInterrupt:
+    observer.stop()
+observer.join()
