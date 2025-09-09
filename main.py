@@ -9,7 +9,7 @@ import datetime
 import random
 
 # ------------------- Settings -------------------
-FATHER_ID = "YOUR_DISCORD_ID_HERE"
+FATHER_ID = "FATHER_ID = "829518703363096616""
 
 # ------------------- Keep Alive -------------------
 app = Flask('')
