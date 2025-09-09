@@ -7,9 +7,12 @@ from flask import Flask
 from threading import Thread
 import datetime
 import random
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import threading
 
 # ------------------- Settings -------------------
-FATHER_ID = "FATHER_ID = "829518703363096616""
+FATHER_ID = "829518703363096616"  # Your numeric Discord ID
 
 # ------------------- Keep Alive -------------------
 app = Flask('')
@@ -19,7 +22,7 @@ def home():
     return "I'm alive!"
 
 def run():
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=8080)
 
 def keep_alive():
     t = Thread(target=run)
@@ -77,7 +80,6 @@ def calculate_free_slots(busy_times, play_times):
     return free_slots
 
 def mutual_free(users, day):
-    """Calculate mutual free slots for a list of user IDs on a given day"""
     all_free = None
     for user_id in users:
         schedule = data["users"][user_id].get("schedule", [])
@@ -106,12 +108,8 @@ async def on_message(message):
     if message.author == bot.user:
         return
     
-    # Determine name logic
     user_id = str(message.author.id)
-    if user_id == FATHER_ID:
-        name = "Father"
-    else:
-        name = message.author.mention
+    name = "Father" if user_id == FATHER_ID else message.author.mention
 
     content_lower = message.content.lower()
     
@@ -202,12 +200,7 @@ async def on_message(message):
             else:
                 await message.channel.send("No games have been suggested yet!")
 
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-import threading
-import time
-
-# --- Auto-reload handler ---
+# ------------------- Auto-reload -------------------
 class ReloadHandler(FileSystemEventHandler):
     def __init__(self, restart_func):
         self.restart_func = restart_func
@@ -215,22 +208,15 @@ class ReloadHandler(FileSystemEventHandler):
     def on_modified(self, event):
         if event.src_path.endswith("main.py"):
             print("Detected code change. Restarting bot...")
-            self.restart_func()
+            threading.Thread(target=self.restart_func).start()
 
 def start_bot():
     keep_alive()
     bot.run(os.environ["TOKEN"])
 
-def restart_bot():
-    threading.Thread(target=start_bot).start()
-
-# Watch for changes
 observer = Observer()
-observer.schedule(ReloadHandler(restart_bot), path=".", recursive=False)
+observer.schedule(ReloadHandler(start_bot), path=".", recursive=False)
 observer.start()
 
-try:
-    start_bot()
-except KeyboardInterrupt:
-    observer.stop()
-observer.join()
+# ------------------- Start Bot -------------------
+start_bot()
